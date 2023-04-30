@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 import shortid from 'shortid';
 
@@ -7,26 +7,17 @@ import { ContactList } from './ContactList';
 import { Filter } from './Filter';
 import { DATA_KEY } from './Constants';
 
-class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
+const App = () => {
+  const [contacts, setContacts] = useState(
+    JSON.parse(localStorage.getItem(DATA_KEY)) ?? []
+  );
+  const [filter, setFilter] = useState('');
 
-  componentDidMount() {
-    const contacts = JSON.parse(localStorage.getItem(DATA_KEY)) || [];
-    this.setState({ contacts });
-  }
+  useEffect(() => {
+    localStorage.setItem(DATA_KEY, JSON.stringify(contacts));
+  }, [contacts]);
 
-  componentDidUpdate(_, prevState) {
-    const { contacts } = this.state;
-    if (prevState.contacts !== contacts) {
-      localStorage.setItem(DATA_KEY, JSON.stringify(contacts));
-    }
-  }
-
-  formSubmitHandler = data => {
-    const { contacts } = this.state;
+  const formSubmitHandler = data => {
     const existingContact = contacts.find(
       contact => contact.name === data.name
     );
@@ -35,49 +26,39 @@ class App extends Component {
       return;
     }
     const newContact = { id: shortid.generate(), ...data };
-    this.setState(prevState => ({
-      contacts: [...prevState.contacts, newContact],
-    }));
+    setContacts(prevState => [...prevState, newContact]);
   };
 
-  handleInputFind = e => {
-    this.setState({
-      filter: e.currentTarget.value,
-    });
+  const handleInputFind = e => setFilter(e.currentTarget.value);
+
+  const handleDeleteContact = id => {
+    setContacts(prevState => prevState.filter(contact => contact.id !== id));
   };
 
-  handleDeleteContact = id => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== id),
-    }));
-  };
-
-  render() {
-    const { filter, contacts } = this.state;
-
+  const filteredContacts = () => {
     const normilizedFilter = filter.toLowerCase();
 
-    const searchedContact = contacts.filter(contact =>
+    return contacts.filter(contact =>
       contact.name.toLowerCase().includes(normilizedFilter)
     );
+  };
 
-    return (
-      <div className="container">
-        <div>
-          <h1 className="container__title">Phonebook</h1>
-          <ContactForm onSubmit={this.formSubmitHandler} />
-        </div>
-        <div className="container__contacts">
-          <h1 className="container__title">Contacts</h1>
-          <Filter value={filter} onChangeFilter={this.handleInputFind} />
-          <ContactList
-            contacts={searchedContact}
-            onClick={this.handleDeleteContact}
-          />
-        </div>
+  return (
+    <div className="container">
+      <div>
+        <h1 className="container__title">Phonebook</h1>
+        <ContactForm onSubmit={formSubmitHandler} />
       </div>
-    );
-  }
-}
+      <div className="container__contacts">
+        <h1 className="container__title">Contacts</h1>
+        <Filter value={filter} onChangeFilter={handleInputFind} />
+        <ContactList
+          contacts={filteredContacts()}
+          onClick={handleDeleteContact}
+        />
+      </div>
+    </div>
+  );
+};
 
 export default App;
